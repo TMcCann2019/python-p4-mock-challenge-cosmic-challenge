@@ -25,6 +25,60 @@ db.init_app(app)
 def home():
     return ''
 
+@app.route('/scientists', methods=['GET', 'POST'])
+def get_scientists():
+    if request.method == "GET":
+        scientists = Scientist.query.all()
+        scientists_dict = [scientist.to_dict(rules = ("-missions",)) for scientist in scientists]
+        response = make_response(scientists_dict, 200)
+    elif request.method == "POST":
+        try:
+            data = request.get_json()
+            new_scientist = Scientist(
+                name = data['name'],
+                field_of_study = data['field_of_study']
+            )
+            db.session.add(new_scientist)
+            db.session.commit()
+            response = make_response(new_scientist.to_dict(rules = ("-missions",)), 201)
+        except ValueError:
+            response = make_response({"errors" : ["validation errors"]}, 400)
+    return response
+
+@app.route('/scientists/<int:scientist_id>', methods= ['GET', 'PATCH', 'DELETE'])
+def get_scientist(id):
+    scientist = Scientist.query.filter_by(id = id).first()
+    if scientist:
+        if request.method == "GET":
+            scientist_dict = scientist.to_dict()
+            response = make_response(scientist_dict, 200)
+        elif request.method == "PATCH":
+            try:
+                data = request.get_json()
+                for attr in data:
+                    setattr(scientist, attr, data[attr])
+                db.session.commit()
+                response = make_response(scientist.to_dict(), 202)
+            except ValueError:
+                response = make_response({"errors" : ["validation errors"]}, 400)
+        elif request.method == "DELETE":
+            if scientist:
+                db.session.delete(scientist)
+                db.session.commit()
+                response = make_response(scientist.to_dict(), 204)
+            else:
+                response = make_response({"error" : "scientist not found"}, 404)
+    else:
+        response = make_response({"error" : "scientist not found"}, 404)
+    return response
+
+@app.route('/planets', methods = ['GET'])
+def get_planets():
+    pass
+
+@app.route('/missions', methods = ['POST'])
+def mission():
+    pass
 
 if __name__ == '__main__':
     app.run(port=5555, debug=True)
