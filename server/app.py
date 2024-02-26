@@ -45,7 +45,7 @@ def get_scientists():
             response = make_response({"errors" : ["validation errors"]}, 400)
     return response
 
-@app.route('/scientists/<int:scientist_id>', methods= ['GET', 'PATCH', 'DELETE'])
+@app.route('/scientists/<int:id>', methods= ['GET', 'PATCH', 'DELETE'])
 def get_scientist(id):
     scientist = Scientist.query.filter_by(id = id).first()
     if scientist:
@@ -67,18 +67,33 @@ def get_scientist(id):
                 db.session.commit()
                 response = make_response(scientist.to_dict(), 204)
             else:
-                response = make_response({"error" : "scientist not found"}, 404)
+                response = make_response({"error" : "Scientist not found"}, 404)
     else:
-        response = make_response({"error" : "scientist not found"}, 404)
+        response = make_response({"error" : "Scientist not found"}, 404)
     return response
 
 @app.route('/planets', methods = ['GET'])
 def get_planets():
-    pass
+    planets = Planet.query.all()
+    planets_dict = [planet.to_dict(rules = ("-missions",)) for planet in planets]
+    response = make_response(planets_dict, 200)
+    return response
 
 @app.route('/missions', methods = ['POST'])
 def mission():
-    pass
+    try:
+        data = request.get_json()
+        new_mission = Mission(
+            name = data['name'],
+            planet_id = data['planet_id'],
+            scientist_id = data['scientist_id']
+        )
+        db.session.add(new_mission)
+        db.session.commit()
+        response = make_response(new_mission.to_dict(rules = ("-missions",)), 201)
+    except ValueError:
+        response = make_response({"errors" : ["validation errors"]}, 400)
+    return response
 
 if __name__ == '__main__':
     app.run(port=5555, debug=True)
